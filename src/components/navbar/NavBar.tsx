@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { Theme } from '@mui/material/styles'
 import { AppBar, Box, Drawer, IconButton, Toolbar, Typography } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import MenuIcon from '@mui/icons-material/Menu'
@@ -55,12 +56,14 @@ const DrawerNavItem = styled(NavLink)(({ theme }) => ({
     },
 }))
 
-const logoSx = {
+// Logo wordmark styles: matches the h1 size/weight, in Cinzel like the real logo.
+const getLogoSx = (theme: Theme) => ({
     fontFamily: '"Cinzel", serif',
-    fontSize: '20px',
+    fontSize: theme.typography.h1.fontSize,
+    fontWeight: theme.typography.h1.fontWeight,
     letterSpacing: '0.05em',
-    color: 'primary.main',
-} as const
+    color: theme.palette.primary.main,
+})
 
 // Full-width navbar.
 // Desktop (sm and up): wordmark on the left, nav links centered.
@@ -80,7 +83,9 @@ function NavBar() {
                     alignItems: 'center',
                 }}
             >
-                <Typography sx={{ ...logoSx, justifySelf: 'start' }}>Lunitas</Typography>
+                <Typography sx={(theme) => ({ ...getLogoSx(theme), justifySelf: 'start' })}>
+                    Lunitas
+                </Typography>
 
                 <Box sx={{ display: { xs: 'none', sm: 'flex' }, justifySelf: 'center' }}>
                     {appRoutes.map((route) => (
