@@ -1,11 +1,9 @@
-// This file mixes local components with a non-component export (`router`), which
-// react-refresh's only-export-components rule flags. Fast refresh on this file is not
-// a concern in practice, so the rule is disabled here.
-/* eslint-disable react-refresh/only-export-components */
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { createBrowserRouter, Outlet } from 'react-router'
 import NavBar from '../components/navbar/NavBar'
+import BaseAlert from '../components/alert/BaseAlert'
+import useAlertStore from '../stores/AlertStore'
 import { appRoutes, APP_NAME } from './routes.config'
 
 interface PageTitleProps {
@@ -22,15 +20,26 @@ function PageTitle({ title, children }: PageTitleProps) {
     return children
 }
 
+// Root layout: nav + the global alert + whichever route matched.
+// Fires a one-time welcome alert on mount, exercising showAlert end-to-end.
+function AppLayout() {
+    useEffect(() => {
+        useAlertStore.getState().showAlert('Bienvenido a Lunitas!', 'info')
+    }, [])
+
+    return (
+        <>
+            <NavBar />
+            <BaseAlert />
+            <Outlet />
+        </>
+    )
+}
+
 // Builds one router route per entry in appRoutes, each wrapped to set the tab title.
 export const router = createBrowserRouter([
     {
-        element: (
-            <>
-                <NavBar />
-                <Outlet />
-            </>
-        ),
+        element: <AppLayout />,
         children: appRoutes.map(({ path, label, Component }) => {
             const element = (
                 <PageTitle title={label}>
