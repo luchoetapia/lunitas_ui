@@ -15,7 +15,7 @@ function EmptyList({ message = 'No hay datos disponibles', icon }: EmptyListProp
             spacing={1}
             sx={{ alignItems: 'center', justifyContent: 'center', py: 6, color: 'text.disabled' }}
         >
-            {icon ?? <InboxOutlinedIcon sx={{ fontSize: 64 }} />}
+            {icon ?? <InboxOutlinedIcon sx={{ fontSize: '4rem' }} />}
             <Typography variant="body2" color="text.disabled">
                 {message}
             </Typography>
