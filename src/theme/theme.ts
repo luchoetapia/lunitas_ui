@@ -37,20 +37,20 @@ export const theme = createTheme({
         fontFamily: '"Nunito Sans", sans-serif',
         h1: {
             fontFamily: '"Cinzel", serif',
-            fontSize: '26px',
+            fontSize: '30px',
             fontWeight: 600,
             letterSpacing: '0.02em',
         },
         subtitle1: {
-            fontSize: '20px',
+            fontSize: '24px',
             fontWeight: 500,
         },
         body2: {
-            fontSize: '16px',
+            fontSize: '20px',
         },
         // Reserved for secondary/small text (labels, timestamps, helper text).
         caption: {
-            fontSize: '12px',
+            fontSize: '16px',
         },
     },
 })
