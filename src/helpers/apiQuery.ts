@@ -1,4 +1,14 @@
 import axios from 'axios';
+import type { AxiosResponse } from 'axios';
+
+const TIMEOUT = 10000;
+
+// Standardized JSON shape returned by the backend API
+interface ApiResponse<T> {
+    success: boolean;
+    data: T;
+    error?: string;
+}
 
 const addParamToUrl = (url: string, params: Record<string, string | number | boolean> = {}) => {
     Object.entries(params).forEach(([key, value]) => {
@@ -8,42 +18,79 @@ const addParamToUrl = (url: string, params: Record<string, string | number | boo
     return url;
 }
 
-const getQuery = async (url: string, params: Record<string, string | number | boolean> = {}) => {
-    url = addParamToUrl(url, params);
-    
-    let response = await axios.get(url);
-    response = response.data;
+// Thrown when a request exceeds timeout, mapped to HTTP 504
+class TimeoutError extends Error {
+    status: number;
 
-    return response;
+    constructor(message: string = 'Request timeout') {
+        super(message);
+        this.name = 'TimeoutError';
+        this.status = 504;
+    }
 }
 
-const postQuery = async (url: string, params: Record<string, string | number | boolean> = {}, 
-                        body: object) => {
-    url = addParamToUrl(url, params);
-    
-    let response = await axios.post(url, body);
-    response = response.data;
+const calculateTimeout = (): Promise<never> => new Promise((_, reject) => {
+    setTimeout(() => {
+        reject(new TimeoutError());
+    }, TIMEOUT);
+});
 
-    return response;
+const getQuery = async <T>(
+    url: string,
+    params: Record<string, string | number | boolean> = {}
+): Promise<ApiResponse<T>> => {
+    url = addParamToUrl(url, params);
+
+    const response: AxiosResponse<ApiResponse<T>> = await Promise.race([
+        axios.get<ApiResponse<T>>(url),
+        calculateTimeout()
+    ]);
+
+    return response.data;
 }
 
-const putQuery = async (url: string, params: Record<string, string | number | boolean> = {}, 
-                        body: object) => {
+const postQuery = async <T>(
+    url: string,
+    params: Record<string, string | number | boolean> = {},
+    body: object
+): Promise<ApiResponse<T>> => {
     url = addParamToUrl(url, params);
-    
-    let response = await axios.put(url, body);
-    response = response.data;
 
-    return response;
+    const response: AxiosResponse<ApiResponse<T>> = await Promise.race([
+        axios.post<ApiResponse<T>>(url, body),
+        calculateTimeout()
+    ]);
+
+    return response.data;
 }
 
-const deleteQuery = async (url: string, params: Record<string, string | number | boolean> = {}) => {
+const putQuery = async <T>(
+    url: string,
+    params: Record<string, string | number | boolean> = {},
+    body: object
+): Promise<ApiResponse<T>> => {
     url = addParamToUrl(url, params);
-    
-    let response = await axios.delete(url);
-    response = response.data;
 
-    return response;
+    const response: AxiosResponse<ApiResponse<T>> = await Promise.race([
+        axios.put<ApiResponse<T>>(url, body),
+        calculateTimeout()
+    ]);
+
+    return response.data;
+}
+
+const deleteQuery = async <T>(
+    url: string,
+    params: Record<string, string | number | boolean> = {}
+): Promise<ApiResponse<T>> => {
+    url = addParamToUrl(url, params);
+
+    const response: AxiosResponse<ApiResponse<T>> = await Promise.race([
+        axios.delete<ApiResponse<T>>(url),
+        calculateTimeout()
+    ]);
+
+    return response.data;
 }
 
 export { getQuery, postQuery, putQuery, deleteQuery };
