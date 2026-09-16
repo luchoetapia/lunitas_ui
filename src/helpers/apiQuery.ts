@@ -2,6 +2,7 @@ import axios from 'axios';
 import type { AxiosResponse } from 'axios';
 
 const TIMEOUT = 10000;
+const API_URL = import.meta.env.VITE_API_URL;
 
 // Standardized JSON shape returned by the backend API
 interface ApiResponse<T> {
@@ -10,7 +11,10 @@ interface ApiResponse<T> {
     error?: string;
 }
 
-const addParamToUrl = (url: string, params: Record<string, string | number | boolean> = {}) => {
+const getFormatedUrl = (url: string, params: Record<string, string | number | boolean> = {}) => {
+    if (!url.startsWith('http'))
+        url = `${API_URL}${ url.startsWith('/') ? '' : '/' }${url}`;
+    
     Object.entries(params).forEach(([key, value]) => {
         url += `${url.includes('?') ? '&' : '?'}${key}=${value}`
     })
@@ -39,7 +43,7 @@ const getQuery = async <T>(
     url: string,
     params: Record<string, string | number | boolean> = {}
 ): Promise<ApiResponse<T>> => {
-    url = addParamToUrl(url, params);
+    url = getFormatedUrl(url, params);
 
     const response: AxiosResponse<ApiResponse<T>> = await Promise.race([
         axios.get<ApiResponse<T>>(url),
@@ -54,7 +58,7 @@ const postQuery = async <T>(
     params: Record<string, string | number | boolean> = {},
     body: object
 ): Promise<ApiResponse<T>> => {
-    url = addParamToUrl(url, params);
+    url = getFormatedUrl(url, params);
 
     const response: AxiosResponse<ApiResponse<T>> = await Promise.race([
         axios.post<ApiResponse<T>>(url, body),
@@ -69,7 +73,7 @@ const putQuery = async <T>(
     params: Record<string, string | number | boolean> = {},
     body: object
 ): Promise<ApiResponse<T>> => {
-    url = addParamToUrl(url, params);
+    url = getFormatedUrl(url, params);
 
     const response: AxiosResponse<ApiResponse<T>> = await Promise.race([
         axios.put<ApiResponse<T>>(url, body),
@@ -83,7 +87,7 @@ const deleteQuery = async <T>(
     url: string,
     params: Record<string, string | number | boolean> = {}
 ): Promise<ApiResponse<T>> => {
-    url = addParamToUrl(url, params);
+    url = getFormatedUrl(url, params);
 
     const response: AxiosResponse<ApiResponse<T>> = await Promise.race([
         axios.delete<ApiResponse<T>>(url),
