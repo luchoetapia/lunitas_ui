@@ -24,8 +24,11 @@ export const theme = createTheme({
         info: {
             main: colors.info,
         },
+        // Cards, dialogs and menus (MUI's Paper) share the page's own
+        // background instead of defaulting to white.
         background: {
             default: colors.background,
+            paper: colors.background,
         },
         text: {
             primary: colors.text.primary,
