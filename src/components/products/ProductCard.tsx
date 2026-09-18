@@ -2,6 +2,7 @@ import { Box, Button, Card, Chip, Skeleton, Stack, Typography } from '@mui/mater
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import type { Product } from '../../models/domain'
+import { getModelsSummary, getSpecsText } from '../../helpers/productFormat'
 
 // Square thumbnail: fluid width capped per breakpoint, height follows via
 // aspect-ratio — nothing here is pinned to a fixed pixel size.
@@ -19,10 +20,6 @@ interface ProductCardProps {
     onEdit?: (product: Product) => void
     onViewDetails?: (product: Product) => void
 }
-
-// "tela · relleno · largo x ancho" line shown under the product name.
-const getSpecsText = (product: Product) =>
-    `${product.fabric} · ${product.filling} · ${product.length}cm x ${product.width}cm`
 
 function ProductCard({ product, loading, onEdit, onViewDetails }: ProductCardProps) {
     const isLoading = loading || !product
@@ -64,6 +61,14 @@ function ProductCard({ product, loading, onEdit, onViewDetails }: ProductCardPro
                 ) : (
                     <Typography variant="body2" noWrap>
                         {getSpecsText(product)}
+                    </Typography>
+                )}
+
+                {isLoading ? (
+                    <Skeleton variant="text" width="70%" />
+                ) : (
+                    <Typography variant="body2" color="text.secondary" noWrap>
+                        {getModelsSummary(product)}
                     </Typography>
                 )}
 

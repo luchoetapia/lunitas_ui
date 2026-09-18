@@ -4,14 +4,12 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, For
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined'
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined'
 import ImageUploader from '../common/ImageUploader'
+import ProductModelFields from './ProductModelFields'
+import { createEmptyModel } from '../../models/productForm'
+import type { ModelFormValues } from '../../models/productForm'
 import useAlertStore from '../../stores/AlertStore'
-import { postQuery, putQuery } from '../../helpers/apiQuery'    
-import type { Product } from '../../models/domain'
-
-interface PriceTier {
-    quantity: string
-    price: string
-}
+import { postQuery, putQuery } from '../../helpers/apiQuery'
+import type { Product, ProductModel } from '../../models/domain'
 
 interface ProductFormValues {
     name: string
@@ -19,12 +17,14 @@ interface ProductFormValues {
     image: string
     fabric: string
     filling: string
-    length: string
-    width: string
     is_active: boolean
-    prices: PriceTier[]
+    models: ModelFormValues[]
     questions: string[]
 }
+
+// Payload sent to the API: models carry no _id, the backend replaces the
+// whole array on update.
+type ModelPayload = Omit<ProductModel, '_id'>
 
 const EMPTY_VALUES: ProductFormValues = {
     name: '',
@@ -32,12 +32,23 @@ const EMPTY_VALUES: ProductFormValues = {
     image: '',
     fabric: '',
     filling: '',
-    length: '',
-    width: '',
     is_active: true,
-    prices: [{ quantity: '1', price: '' }],
+    models: [createEmptyModel()],
     questions: [],
 }
+
+// The "1" tier is the mandatory base price and always shown first.
+const modelToFormValues = (model: ProductModel): ModelFormValues => ({
+    _id: model._id,
+    length: String(model.length),
+    width: String(model.width),
+    prices: Object.entries(model.prices)
+        .sort(([a], [b]) => (a === '1' ? -1 : b === '1' ? 1 : Number(a) - Number(b)))
+        .map(([quantity, price]) => ({
+            quantity,
+            price: String(price),
+        })),
+})
 
 // Converts a Product (as returned by the API) into editable form state.
 const productToFormValues = (product: Product): ProductFormValues => ({
@@ -46,16 +57,10 @@ const productToFormValues = (product: Product): ProductFormValues => ({
     image: product.image,
     fabric: product.fabric,
     filling: product.filling,
-    length: String(product.length),
-    width: String(product.width),
     is_active: product.is_active,
-    // The "1" tier is the mandatory base price and always shown first.
-    prices: Object.entries(product.prices)
-        .sort(([a], [b]) => (a === '1' ? -1 : b === '1' ? 1 : Number(a) - Number(b)))
-        .map(([quantity, price]) => ({
-            quantity,
-            price: String(price),
-        })),
+    models: product.models.length > 0
+        ? product.models.map(modelToFormValues)
+        : [createEmptyModel()],
     questions: product.questions,
 })
 
@@ -84,19 +89,16 @@ function ProductFormContent({ product, onClose, onSaved }: ProductFormContentPro
         setValues((prev) => ({ ...prev, [field]: value }))
     }
 
-    const handlePriceChange = (index: number, field: keyof PriceTier, value: string) => {
-        const prices = values.prices.map((tier, i) => (
-            i === index ? { ...tier, [field]: value } : tier
-        ))
-        setField('prices', prices)
+    const handleModelChange = (index: number, model: ModelFormValues) => {
+        setField('models', values.models.map((m, i) => (i === index ? model : m)))
     }
 
-    const addPriceTier = () => {
-        setField('prices', [...values.prices, { quantity: '', price: '' }])
+    const addModel = () => {
+        setField('models', [...values.models, createEmptyModel()])
     }
 
-    const removePriceTier = (index: number) => {
-        setField('prices', values.prices.filter((_, i) => i !== index))
+    const removeModel = (index: number) => {
+        setField('models', values.models.filter((_, i) => i !== index))
     }
 
     const handleQuestionChange = (index: number, value: string) => {
@@ -112,35 +114,54 @@ function ProductFormContent({ product, onClose, onSaved }: ProductFormContentPro
         setField('questions', values.questions.filter((_, i) => i !== index))
     }
 
-    // Builds the { "1": 100, "2": 90 } shape the API expects, dropping empty rows.
-    const buildPricesPayload = (): Record<string, number> => {
-        const prices: Record<string, number> = {}
+    // Builds the models array the API expects: measurements as numbers and
+    // prices as a { "1": 100, "2": 90 } object, dropping empty tier rows.
+    const buildModelsPayload = (): ModelPayload[] => (
+        values.models.map(({ length, width, prices }) => {
+            const tiers: Record<string, number> = {}
 
-        values.prices.forEach(({ quantity, price }) => {
-            if (quantity && price) {
-                prices[quantity] = Number(price)
-            }
+            prices.forEach(({ quantity, price }) => {
+                if (quantity && price) {
+                    tiers[quantity] = Number(price)
+                }
+            })
+
+            return { length: Number(length), width: Number(width), prices: tiers }
         })
+    )
 
-        return prices
+    const validateModels = (models: ModelPayload[]): string | null => {
+        const sizes = new Set<string>()
+
+        for (const [index, model] of models.entries()) {
+            const label = `Modelo ${index + 1}`
+
+            if (!model.length || model.length <= 0) return `${label}: el largo debe ser mayor a 0`
+            if (!model.width || model.width <= 0) return `${label}: el ancho debe ser mayor a 0`
+            if (!model.prices['1']) return `${label}: definí el precio para cantidad mínima 1`
+
+            const size = `${model.length}x${model.width}`
+            if (sizes.has(size)) return `${label}: ya hay otro modelo con esas medidas`
+            sizes.add(size)
+        }
+
+        return null
     }
 
-    const validate = (prices: Record<string, number>): string | null => {
+    const validate = (models: ModelPayload[]): string | null => {
         if (!values.name.trim()) return 'El nombre es obligatorio'
         if (!values.description.trim()) return 'La descripción es obligatoria'
         if (!values.image) return 'Subí una imagen del producto'
         if (!values.fabric.trim()) return 'La tela es obligatoria'
         if (!values.filling.trim()) return 'El relleno es obligatorio'
-        if (!values.length || Number(values.length) <= 0) return 'El largo debe ser mayor a 0'
-        if (!values.width || Number(values.width) <= 0) return 'El ancho debe ser mayor a 0'
-        if (!prices['1']) return 'Definí el precio base para cantidad mínima 1'
+        if (models.length === 0) return 'Agregá al menos un modelo'
 
-        return null
+        return validateModels(models)
     }
 
     const handleSubmit = async () => {
-        const prices = buildPricesPayload()
-        const validationError = validate(prices)
+        const models = buildModelsPayload()
+        const validationError = validate(models)
 
         if (validationError) {
             showAlert(validationError, 'warning')
@@ -153,10 +174,8 @@ function ProductFormContent({ product, onClose, onSaved }: ProductFormContentPro
             image: values.image,
             fabric: values.fabric.trim(),
             filling: values.filling.trim(),
-            length: Number(values.length),
-            width: Number(values.width),
             is_active: values.is_active,
-            prices,
+            models,
             questions: values.questions.map((q) => q.trim()).filter(Boolean),
         }
 
@@ -237,72 +256,28 @@ function ProductFormContent({ product, onClose, onSaved }: ProductFormContentPro
                         />
                     </Stack>
 
-                    <Stack direction="row" spacing={2}>
-                        <TextField
-                            label="Largo (cm)"
-                            type="number"
-                            value={values.length}
-                            onChange={(e) => setField('length', e.target.value)}
-                            fullWidth
-                        />
-                        <TextField
-                            label="Ancho (cm)"
-                            type="number"
-                            value={values.width}
-                            onChange={(e) => setField('width', e.target.value)}
-                            fullWidth
-                        />
-                    </Stack>
-
                     <Divider />
 
-                    <Stack spacing={1}>
+                    <Stack spacing={2}>
                         <Stack
                             direction="row"
                             sx={{ alignItems: 'center', justifyContent: 'space-between' }}
                         >
-                            <Typography variant="subtitle2">Precios por cantidad</Typography>
-                            <IconButton size="small" onClick={addPriceTier}>
+                            <Typography variant="subtitle2">Modelos</Typography>
+                            <IconButton size="small" onClick={addModel}>
                                 <AddOutlinedIcon fontSize="small" />
                             </IconButton>
                         </Stack>
 
-                        {values.prices.map((tier, index) => (
-                            <Stack
-                                key={index}
-                                direction="row"
-                                spacing={1}
-                                sx={{ alignItems: 'center' }}
-                            >
-                                <TextField
-                                    label="Cantidad mínima"
-                                    type="number"
-                                    value={tier.quantity}
-                                    onChange={(e) => (
-                                        handlePriceChange(index, 'quantity', e.target.value)
-                                    )}
-                                    disabled={index === 0}
-                                    size="small"
-                                    fullWidth
-                                />
-                                <TextField
-                                    label="Precio unitario"
-                                    type="number"
-                                    value={tier.price}
-                                    onChange={(e) => (
-                                        handlePriceChange(index, 'price', e.target.value)
-                                    )}
-                                    size="small"
-                                    fullWidth
-                                />
-                                <IconButton
-                                    size="small"
-                                    onClick={() => removePriceTier(index)}
-                                    disabled={index === 0}
-                                >
-                                    <DeleteOutlineOutlinedIcon fontSize="small" />
-                                </IconButton>
-                            </Stack>
+                        {values.models.map((model, index) => (
+                            <ProductModelFields
+                                key={model._id ?? index}
+                                model={model}
+                                index={index}
+                                canRemove={values.models.length > 1}
+                                onChange={handleModelChange}
+                                onRemove={removeModel}
+                            />
                         ))}
                     </Stack>
 

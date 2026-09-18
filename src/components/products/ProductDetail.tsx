@@ -13,6 +13,8 @@ import {
 } from '@mui/material'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import type { Product } from '../../models/domain'
+import { getModelSizeText, getPriceTierText, getSortedPriceTiers,
+    getSpecsText } from '../../helpers/productFormat'
 
 interface ProductDetailProps {
     open: boolean
@@ -21,19 +23,11 @@ interface ProductDetailProps {
     onEdit: (product: Product) => void
 }
 
-// "tela · relleno · largo x ancho" line, same wording used in ProductCard.
-const getSpecsText = (product: Product) =>
-    `${product.fabric} · ${product.filling} · ${product.length}cm x ${product.width}cm`
-
 // Read-only "ficha" for a single product. Opened from ProductCard's
 // "Ver ficha" button. The pencil next to the title hands off to the edit
 // modal instead of duplicating any editing UI here.
 function ProductDetail({ open, product, onClose, onEdit }: ProductDetailProps) {
     if (!product) return null
-
-    const priceTiers = Object.entries(product.prices).sort(
-        ([a], [b]) => Number(a) - Number(b),
-    )
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -79,12 +73,20 @@ function ProductDetail({ open, product, onClose, onEdit }: ProductDetailProps) {
 
                     <Divider />
 
-                    <Stack spacing={1}>
-                        <Typography variant="subtitle2">Precios por cantidad</Typography>
-                        {priceTiers.map(([quantity, price]) => (
-                            <Typography key={quantity} variant="body2">
-                                Desde {quantity} unidad{quantity === '1' ? '' : 'es'}: ${price}
-                            </Typography>
+                    <Stack spacing={2}>
+                        <Typography variant="subtitle2">Modelos y precios</Typography>
+
+                        {product.models.map((model) => (
+                            <Stack key={model._id} spacing={0.5}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    {getModelSizeText(model)}
+                                </Typography>
+                                {getSortedPriceTiers(model).map(([quantity, price]) => (
+                                    <Typography key={quantity} variant="body2">
+                                        {getPriceTierText(quantity, price)}
+                                    </Typography>
+                                ))}
+                            </Stack>
                         ))}
                     </Stack>
 
