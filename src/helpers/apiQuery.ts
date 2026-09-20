@@ -87,7 +87,7 @@ const getQuery = async <T>(
 
     try {
         const response: AxiosResponse<ApiResponse<T>> = await Promise.race([
-            axios.get<ApiResponse<T>>(url),
+            axios.get<ApiResponse<T>>(url, { withCredentials: true }),
             calculateTimeout()
         ]);
 
@@ -106,7 +106,7 @@ const postQuery = async <T>(
 
     try {
         const response: AxiosResponse<ApiResponse<T>> = await Promise.race([
-            axios.post<ApiResponse<T>>(url, body),
+            axios.post<ApiResponse<T>>(url, body, { withCredentials: true }),
             calculateTimeout()
         ]);
 
@@ -125,7 +125,7 @@ const putQuery = async <T>(
 
     try {
         const response: AxiosResponse<ApiResponse<T>> = await Promise.race([
-            axios.put<ApiResponse<T>>(url, body),
+            axios.put<ApiResponse<T>>(url, body, { withCredentials: true }),
             calculateTimeout()
         ]);
 
@@ -143,7 +143,7 @@ const deleteQuery = async <T>(
 
     try {
         const response: AxiosResponse<ApiResponse<T>> = await Promise.race([
-            axios.delete<ApiResponse<T>>(url),
+            axios.delete<ApiResponse<T>>(url, { withCredentials: true }),
             calculateTimeout()
         ]);
 
