@@ -2,6 +2,7 @@ import axios from 'axios';
 import type { AxiosResponse } from 'axios';
 import type { AlertColor } from '@mui/material/Alert';
 import useAlertStore from '../stores/AlertStore';
+import type { CurrentUser } from '../models/auth';
 
 const TIMEOUT = 10000;
 const API_URL = import.meta.env.VITE_API_URL;
@@ -153,16 +154,18 @@ const deleteQuery = async <T>(
     }
 }
 
-// Silently probes whether the httpOnly session cookie is still valid. Used by the
-// route guard on app load: an unauthenticated visitor hitting a protected page is an
-// expected outcome, not an error, so this deliberately skips handleApiError's alert.
-const checkSession = async (): Promise<boolean> => {
+// Returns null when there is no valid session.
+const getCurrentUser = async (): Promise<CurrentUser | null> => {
     try {
-        await axios.get(getFormatedUrl('/auth/me'), { withCredentials: true });
-        return true;
+        const response: AxiosResponse<ApiResponse<CurrentUser>> = await axios.get(
+            getFormatedUrl('/auth/me'),
+            { withCredentials: true }
+        );
+        return response.data.data;
     } catch {
-        return false;
+        return null;
     }
 }
 
-export { getQuery, postQuery, putQuery, deleteQuery, checkSession };
+export { getQuery, postQuery, putQuery, deleteQuery, getCurrentUser };
+export type { CurrentUser };

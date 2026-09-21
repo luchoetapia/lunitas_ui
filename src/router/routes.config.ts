@@ -6,6 +6,10 @@ import Orders from '../views/Orders'
 // Site name appended to every browser tab title.
 export const APP_NAME = 'Lunitas Deco Hogar'
 
+// Mandatory password-change page shown while the session user has isFirstLogin
+// set (see components/auth/RequireAuth.tsx).
+export const FIRST_LOGIN_PATH = '/primer-ingreso'
+
 export interface AppRoute {
     path: string // '/' is treated as the index route
     label: string // used for the nav link and the tab title (e.g. "Inicio - Lunitas Deco Hogar")

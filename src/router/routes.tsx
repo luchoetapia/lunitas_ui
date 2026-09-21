@@ -5,7 +5,8 @@ import NavBar from '../components/navbar/NavBar'
 import useAlertStore from '../stores/AlertStore'
 import RequireAuth from '../components/auth/RequireAuth'
 import Login from '../views/Login'
-import { appRoutes, APP_NAME } from './routes.config'
+import ChangePassword from '../views/ChangePassword'
+import { appRoutes, APP_NAME, FIRST_LOGIN_PATH } from './routes.config'
 
 interface PageTitleProps {
     title: string
@@ -39,7 +40,9 @@ function AppLayout() {
 // Builds one router route per entry in appRoutes, each wrapped to set the tab title.
 // /login is a standalone route outside RequireAuth/AppLayout, so it renders without the
 // nav bar and without needing a session. Every other route sits behind RequireAuth,
-// which bounces to /login when there is no valid session.
+// which bounces to /login when there is no valid session. FIRST_LOGIN_PATH sits behind
+// RequireAuth too, but outside AppLayout (no nav bar), since a first-login user must
+// change their password before seeing the rest of the app.
 export const router = createBrowserRouter([
     {
         path: '/login',
@@ -52,6 +55,14 @@ export const router = createBrowserRouter([
     {
         element: <RequireAuth />,
         children: [
+            {
+                path: FIRST_LOGIN_PATH,
+                element: (
+                    <PageTitle title="Cambiar contraseña">
+                        <ChangePassword />
+                    </PageTitle>
+                ),
+            },
             {
                 element: <AppLayout />,
                 children: appRoutes.map(({ path, label, Component }) => {
