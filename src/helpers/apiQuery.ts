@@ -153,4 +153,16 @@ const deleteQuery = async <T>(
     }
 }
 
-export { getQuery, postQuery, putQuery, deleteQuery };
+// Silently probes whether the httpOnly session cookie is still valid. Used by the
+// route guard on app load: an unauthenticated visitor hitting a protected page is an
+// expected outcome, not an error, so this deliberately skips handleApiError's alert.
+const checkSession = async (): Promise<boolean> => {
+    try {
+        await axios.get(getFormatedUrl('/auth/me'), { withCredentials: true });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+export { getQuery, postQuery, putQuery, deleteQuery, checkSession };

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { createBrowserRouter, Outlet } from 'react-router'
 import NavBar from '../components/navbar/NavBar'
 import useAlertStore from '../stores/AlertStore'
+import RequireAuth from '../components/auth/RequireAuth'
 import Login from '../views/Login'
 import { appRoutes, APP_NAME } from './routes.config'
 
@@ -36,7 +37,9 @@ function AppLayout() {
 }
 
 // Builds one router route per entry in appRoutes, each wrapped to set the tab title.
-// /login is a standalone route outside AppLayout, so it renders without the nav bar.
+// /login is a standalone route outside RequireAuth/AppLayout, so it renders without the
+// nav bar and without needing a session. Every other route sits behind RequireAuth,
+// which bounces to /login when there is no valid session.
 export const router = createBrowserRouter([
     {
         path: '/login',
@@ -47,14 +50,19 @@ export const router = createBrowserRouter([
         ),
     },
     {
-        element: <AppLayout />,
-        children: appRoutes.map(({ path, label, Component }) => {
-            const element = (
-                <PageTitle title={label}>
-                    <Component />
-                </PageTitle>
-            )
-            return path === '/' ? { index: true, element } : { path, element }
-        }),
+        element: <RequireAuth />,
+        children: [
+            {
+                element: <AppLayout />,
+                children: appRoutes.map(({ path, label, Component }) => {
+                    const element = (
+                        <PageTitle title={label}>
+                            <Component />
+                        </PageTitle>
+                    )
+                    return path === '/' ? { index: true, element } : { path, element }
+                }),
+            },
+        ],
     },
 ])

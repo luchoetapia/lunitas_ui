@@ -3,9 +3,13 @@ import type { FormEvent } from 'react'
 import { Button, IconButton, InputAdornment, Paper, Stack, TextField, Typography } from '@mui/material'
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { postQuery } from '../helpers/apiQuery'
 import useAlertStore from '../stores/AlertStore'
+
+interface LocationState {
+    from?: { pathname: string };
+}
 
 function Login() {
     const [username, setUsername] = useState('');
@@ -13,7 +17,11 @@ function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
     const showAlert = useAlertStore((state) => state.showAlert);
+
+    // Where RequireAuth sent the user in from, if that's how they got here; '/' otherwise.
+    const redirectTo = (location.state as LocationState | null)?.from?.pathname ?? '/';
 
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault();
@@ -27,7 +35,7 @@ function Login() {
 
         try {
             await postQuery('/auth/login', {}, { username: username.trim(), password });
-            navigate('/');
+            navigate(redirectTo, { replace: true });
         } catch {
             // apiQuery already showed the error alert.
         } finally {
