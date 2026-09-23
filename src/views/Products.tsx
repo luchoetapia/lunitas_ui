@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
+import type { ChangeEvent } from 'react'
 import {
     Button,
     FormControlLabel,
     InputAdornment,
+    Pagination,
     Stack,
     Switch,
     TextField,
@@ -15,30 +17,38 @@ import CardsList from '../components/common/CardsList'
 import ProductCard from '../components/products/ProductCard'
 import ProductDetail from '../components/products/ProductDetail'
 import ProductForm from '../components/products/ProductForm'
-import useFetchList from '../hooks/useFetchList'
+import usePaginatedList from '../hooks/usePaginatedList'
 import type { Product } from '../models/domain'
 
 // Number of skeleton ProductCards shown while the list is loading.
 const LOADING_CARDS_COUNT = 3
+const PAGE_SIZE = 5
 
 function Products() {
-    const { items: products, loading, refetch } = useFetchList<Product>('/products')
     const [search, setSearch] = useState('')
     const [onlyActive, setOnlyActive] = useState(true)
+    const [page, setPage] = useState(1)
     const [formOpen, setFormOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState<Product>()
     const [detailOpen, setDetailOpen] = useState(false)
     const [detailProduct, setDetailProduct] = useState<Product>()
 
-    // Client-side filter: the whole catalog is already in memory via
-    // useFetchList, so there's no need to round-trip to the API per keystroke.
-    const filteredProducts = useMemo(() => {
-        const query = search.trim().toLowerCase()
+    const {
+        items: products,
+        loading,
+        totalPages,
+        refetch,
+    } = usePaginatedList<Product>('/products', { search, onlyActive, page, limit: PAGE_SIZE })
 
-        return products
-            .filter((product) => !onlyActive || product.is_active)
-            .filter((product) => !query || product.name.toLowerCase().includes(query))
-    }, [products, search, onlyActive])
+    const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+        setSearch(event.target.value)
+        setPage(1)
+    }
+
+    const handleOnlyActiveChange = (event: ChangeEvent<HTMLInputElement>) => {
+        setOnlyActive(event.target.checked)
+        setPage(1)
+    }
 
     const handleCreateProduct = () => {
         setEditingProduct(undefined)
@@ -67,22 +77,22 @@ function Products() {
 
     const cards = loading
         ? Array.from({ length: LOADING_CARDS_COUNT }, (_, index) => (
-              <ProductCard key={index} loading />
-          ))
-        : filteredProducts.map((product) => (
-              <ProductCard
-                  key={product._id}
-                  product={product}
-                  onEdit={handleEditProduct}
-                  onViewDetails={handleViewDetails}
-              />
-          ))
+                <ProductCard key={index} loading />
+            ))
+        : products.map((product) => (
+                <ProductCard
+                    key={product._id}
+                    product={product}
+                    onEdit={handleEditProduct}
+                    onViewDetails={handleViewDetails}
+                />
+        ))
 
     const emptyMessage = search
         ? 'No se encontraron productos con ese nombre'
         : onlyActive
-          ? 'No hay productos activos'
-          : 'No hay productos cargados'
+            ? 'No hay productos activos'
+            : 'No hay productos cargados'
 
     return (
         <Stack spacing={2} sx={{ p: 4 }}>
@@ -103,7 +113,7 @@ function Products() {
                 >
                     <TextField
                         value={search}
-                        onChange={(event) => setSearch(event.target.value)}
+                        onChange={handleSearchChange}
                         placeholder="Buscar por nombre"
                         size="small"
                         slotProps={{
@@ -119,12 +129,7 @@ function Products() {
                     />
 
                     <FormControlLabel
-                        control={
-                            <Switch
-                                checked={onlyActive}
-                                onChange={(event) => setOnlyActive(event.target.checked)}
-                            />
-                        }
+                        control={<Switch checked={onlyActive} onChange={handleOnlyActiveChange} />}
                         label="Solo activos"
                         sx={{ mx: 0 }}
                     />
@@ -144,6 +149,17 @@ function Products() {
                 emptyMessage={emptyMessage}
                 emptyIcon={<Inventory2OutlinedIcon sx={{ fontSize: '4rem' }} />}
             />
+
+            
+            <Stack sx={{ alignItems: 'center', pt: 1 }}>
+                <Pagination
+                    count={totalPages}
+                    page={page}
+                    onChange={(_event, value) => setPage(value)}
+                    color="primary"
+                />
+            </Stack>
+            
 
             <ProductForm
                 open={formOpen}
