@@ -14,6 +14,7 @@ import AddOutlinedIcon from '@mui/icons-material/AddOutlined'
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined'
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
 import CardsList from '../components/common/CardsList'
+import useDebouncedValue from '../hooks/useDebouncedValue'
 import ProductCard from '../components/products/ProductCard'
 import ProductDetail from '../components/products/ProductDetail'
 import ProductForm from '../components/products/ProductForm'
@@ -23,9 +24,11 @@ import type { Product } from '../models/domain'
 // Number of skeleton ProductCards shown while the list is loading.
 const LOADING_CARDS_COUNT = 3
 const PAGE_SIZE = 5
+const SEARCH_DEBOUNCE_MS = 400 // Time waiting for typing to pause before calling the API.
 
 function Products() {
     const [search, setSearch] = useState('')
+    const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS)
     const [onlyActive, setOnlyActive] = useState(true)
     const [page, setPage] = useState(1)
     const [formOpen, setFormOpen] = useState(false)
@@ -38,7 +41,11 @@ function Products() {
         loading,
         totalPages,
         refetch,
-    } = usePaginatedList<Product>('/products', { search, onlyActive, page, limit: PAGE_SIZE })
+    } = usePaginatedList<Product>('/products', {
+        page,
+        limit: PAGE_SIZE,
+        filters: { search: debouncedSearch, onlyActive },
+    })
 
     const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
         setSearch(event.target.value)

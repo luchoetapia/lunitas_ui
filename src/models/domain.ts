@@ -23,3 +23,35 @@ export interface Product {
     models: ProductModel[]
     questions: string[]
 }
+
+// Domain models used across order components.
+// Mirrors the API's Order shape 1:1 (see lunitas_server/src/database/schemas/OrderSchema.ts
+// and lunitas_server/src/validators/ordersValidators.ts) — keep both in sync when either changes.
+
+export type OrderState = 'PENDING' | 'IN_PROGRESS' | 'TO_DELIVER' | 'DELIVERED' | 'CANCELLED'
+
+// One line item within an order: a product + model combination with its own quantity.
+export interface OrderProduct {
+    product_id: string
+    model_id?: string
+    product_name: string
+    length: number // in centimeters
+    width: number // in centimeters
+    quantity: number
+    color?: string
+    unit_price: number
+}
+
+export interface Order {
+    _id: string
+    products: OrderProduct[]
+    totalPrice: number
+    shipping: boolean
+    shippingAmount: number
+    cost: number
+    orderDate: string
+    deliveryDate?: string
+    deposit: number
+    state: OrderState
+    channel: string
+}
