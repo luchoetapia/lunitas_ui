@@ -23,3 +23,49 @@ export interface Product {
     models: ProductModel[]
     questions: string[]
 }
+
+// Lightweight entry from GET /products/names, used for the order form's
+// product picker (autocomplete over active product names).
+export interface ProductNameOption {
+    _id: string
+    name: string
+}
+
+// Domain models used across order components.
+// Mirrors the API's Order shape 1:1 (see lunitas_server/src/database/schemas/OrderSchema.ts
+// and lunitas_server/src/validators/ordersValidators.ts) — keep both in sync when either changes.
+
+export type OrderState = 'PENDING' | 'IN_PROGRESS' | 'TO_DELIVER' | 'DELIVERED' | 'CANCELLED'
+
+// One line item within an order: a product + model combination with its own quantity.
+export interface OrderProduct {
+    product_id: string
+    model_id?: string
+    product_name: string
+    length: number // in centimeters
+    width: number // in centimeters
+    quantity: number
+    color?: string
+    unit_price: number
+}
+
+export interface Order {
+    _id: string
+    // Not required: can be empty on a direct sale.
+    customerName?: string
+    // Free text: phone, Instagram handle, etc. Can be empty for a direct sale.
+    contactDetail?: string
+    products: OrderProduct[]
+    totalPrice: number
+    shipping: boolean
+    shippingAmount: number
+    // Only one of these two is set, depending on `shipping`.
+    deliveryAddress?: string
+    pickupLocation?: string
+    cost: number
+    orderDate: string
+    deliveryDate?: string
+    deposit: number
+    state: OrderState
+    channel: string
+}

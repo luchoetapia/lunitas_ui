@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getQuery } from '../helpers/apiQuery'
-import useDebouncedValue from './useDebouncedValue'
 
 interface PaginatedData<T> {
     items: T[]
@@ -11,10 +10,15 @@ interface PaginatedData<T> {
 }
 
 interface UsePaginatedListParams {
-    search: string
-    onlyActive: boolean
     page: number
     limit: number
+    // Extra query params (e.g. search, onlyActive, states). Callers own any
+    // debouncing before passing values in here.
+    filters?: Record<string, string | number | boolean>
+    // When false, skips fetching and returns an empty list instead — for filter
+    // combinations that are known to match nothing (e.g. no status selected) and
+    // that the API can't be asked about (an empty comma-list fails validation).
+    enabled?: boolean
 }
 
 interface UsePaginatedListResult<T> {
@@ -24,20 +28,28 @@ interface UsePaginatedListResult<T> {
     refetch: () => void
 }
 
-const SEARCH_DEBOUNCE_MS = 400 // Time waiting for typing to pause before calling the API.
-
 function usePaginatedList<T>(
     url: string,
-    { search, onlyActive, page, limit }: UsePaginatedListParams
+    { page, limit, filters = {}, enabled = true }: UsePaginatedListParams
 ): UsePaginatedListResult<T> {
-    const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS)
     const [items, setItems] = useState<T[]>([])
     const [totalPages, setTotalPages] = useState(1)
     const [loading, setLoading] = useState(true)
 
+    // Stable key so the fetch effect only re-runs when a filter value actually changes,
+    // not on every render's new filters object reference.
+    const filtersKey = JSON.stringify(filters)
+
     const fetchItems = useCallback(() => {
+        if (!enabled) {
+            setItems([])
+            setTotalPages(1)
+            setLoading(false)
+            return
+        }
+
         setLoading(true)
-        getQuery<PaginatedData<T>>(url, { search: debouncedSearch, onlyActive, page, limit })
+        getQuery<PaginatedData<T>>(url, { ...filters, page, limit })
             .then((response) => {
                 setItems(response.data.items)
                 setTotalPages(response.data.totalPages)
@@ -47,7 +59,9 @@ function usePaginatedList<T>(
                 setTotalPages(1)
             })
             .finally(() => setLoading(false))
-    }, [url, debouncedSearch, onlyActive, page, limit])
+        // filtersKey stands in for filters here, see comment above.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [url, filtersKey, page, limit, enabled])
 
     useEffect(() => {
         fetchItems()
