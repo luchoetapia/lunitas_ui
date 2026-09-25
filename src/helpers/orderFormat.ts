@@ -1,7 +1,7 @@
 import type { Order } from '../models/domain'
 import { priceFormatter } from './utils'
 
-// "23/09/2026" — the order date shown on the card's first line.
+// "23/09/2026" — the order date shown on the card next to the cost.
 export const getOrderDateText = (order: Order) =>
     new Date(order.orderDate).toLocaleDateString('es-AR')
 
@@ -27,8 +27,4 @@ export const getTotalPriceText = (order: Order) => priceFormatter(order.totalPri
 
 // An order that's already delivered or cancelled has no further status to move to.
 export const canAdvanceStatus = (order: Order) =>
-    order.state !== 'DELIVERED' && order.state !== 'CANCELLED'
-
-// Same terminal states also block cancelling.
-export const canCancelOrder = (order: Order) =>
     order.state !== 'DELIVERED' && order.state !== 'CANCELLED'

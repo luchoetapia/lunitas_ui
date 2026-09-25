@@ -86,19 +86,6 @@ function Orders() {
         }
     }
 
-    // Destructive and not reversible from the UI yet, so ask for confirmation first.
-    const handleCancel = async (order: Order) => {
-        if (!window.confirm('¿Cancelar este pedido?')) return
-
-        try {
-            await putQuery(`/orders/${order._id}/cancel`, {}, {})
-            useAlertStore.getState().showAlert('Pedido cancelado', 'success')
-            refetch()
-        } catch {
-            // apiQuery already surfaced a user-facing alert.
-        }
-    }
-
     const cards = loading
         ? Array.from({ length: LOADING_CARDS_COUNT }, (_, index) => (
                 <OrderCard key={index} loading />
@@ -110,7 +97,6 @@ function Orders() {
                     onEdit={handleEdit}
                     onAdvanceStatus={handleAdvanceStatus}
                     onViewDetails={handleViewDetails}
-                    onCancel={handleCancel}
                 />
         ))
 
