@@ -24,6 +24,13 @@ export interface Product {
     questions: string[]
 }
 
+// Lightweight entry from GET /products/names, used for the order form's
+// product picker (autocomplete over active product names).
+export interface ProductNameOption {
+    _id: string
+    name: string
+}
+
 // Domain models used across order components.
 // Mirrors the API's Order shape 1:1 (see lunitas_server/src/database/schemas/OrderSchema.ts
 // and lunitas_server/src/validators/ordersValidators.ts) — keep both in sync when either changes.
