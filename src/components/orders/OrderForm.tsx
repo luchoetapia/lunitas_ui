@@ -8,7 +8,12 @@ import OrderProductFields from './OrderProductFields'
 import { getQuery, postQuery, putQuery } from '../../helpers/apiQuery'
 import useAlertStore from '../../stores/AlertStore'
 import { priceFormatter } from '../../helpers/utils'
-import { CREATABLE_STATE_OPTIONS, getChannelOptions, getStateOptions } from '../../helpers/orderOptions'
+import {
+    CREATABLE_STATE_OPTIONS,
+    getChannelOptions,
+    getPickupLocationOptions,
+    getStateOptions,
+} from '../../helpers/orderOptions'
 import {
     createEmptyOrderProduct,
     createEmptyOrderValues,
@@ -20,6 +25,7 @@ import type { OrderFormValues, OrderProductFormValues } from '../../models/order
 import type { Order, ProductNameOption } from '../../models/domain'
 
 const CHANNEL_OPTIONS = getChannelOptions()
+const PICKUP_LOCATION_OPTIONS = getPickupLocationOptions()
 // Only used as a fallback so an already-cancelled order being edited doesn't
 // render with a blank/invalid Estado field — it's shown disabled, not offered
 // as a choice.
@@ -78,6 +84,17 @@ function OrderFormContent({ order, onClose, onSaved }: OrderFormContentProps) {
         }))
     }
 
+    const handleShippingChange = (shipping: boolean) => {
+        // Dirección de entrega and Lugar de entrega are mutually exclusive —
+        // clear whichever one no longer applies when Envío is toggled.
+        setValues((prev) => ({
+            ...prev,
+            shipping,
+            deliveryAddress: shipping ? prev.deliveryAddress : '',
+            pickupLocation: shipping ? '' : prev.pickupLocation,
+        }))
+    }
+
     const handleProductLineChange = (index: number, line: OrderProductFormValues) => {
         setField('products', values.products.map((p, i) => (i === index ? line : p)))
     }
@@ -131,8 +148,13 @@ function OrderFormContent({ order, onClose, onSaved }: OrderFormContentProps) {
         if (!values.channel) return 'Seleccioná el canal de compra'
         if (!values.orderDate) return 'La fecha del pedido es obligatoria'
         if (values.cost === '' || Number(values.cost) < 0) return 'Ingresá el costo del pedido'
-        if (values.shipping && (values.shippingAmount === '' || Number(values.shippingAmount) < 0)) {
-            return 'Ingresá el costo de envío'
+        if (values.shipping) {
+            if (values.shippingAmount === '' || Number(values.shippingAmount) < 0) {
+                return 'Ingresá el costo de envío'
+            }
+            if (!values.deliveryAddress.trim()) return 'Ingresá la dirección de entrega'
+        } else if (!values.pickupLocation) {
+            return 'Seleccioná el lugar de entrega'
         }
         if (values.state === 'DELIVERED' && !values.deliveryDate) {
             return 'La fecha de entrega es obligatoria para un pedido entregado'
@@ -151,9 +173,14 @@ function OrderFormContent({ order, onClose, onSaved }: OrderFormContentProps) {
         }
 
         const basePayload = {
+            customerName: values.customerName.trim(),
+            contactDetail: values.contactDetail.trim(),
             products,
             shipping: values.shipping,
             shippingAmount: values.shipping ? Number(values.shippingAmount || 0) : 0,
+            ...(values.shipping
+                ? { deliveryAddress: values.deliveryAddress.trim() }
+                : { pickupLocation: values.pickupLocation }),
             cost: Number(values.cost),
             orderDate: values.orderDate,
             deposit: values.deposit ? Number(values.deposit) : 0,
@@ -203,6 +230,23 @@ function OrderFormContent({ order, onClose, onSaved }: OrderFormContentProps) {
 
             <DialogContent dividers>
                 <Stack spacing={2}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                        <TextField
+                            label="Nombre del cliente"
+                            value={values.customerName}
+                            onChange={(e) => setField('customerName', e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <TextField
+                            label="Contacto (tel, @ Instagram, etc.)"
+                            value={values.contactDetail}
+                            onChange={(e) => setField('contactDetail', e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                    </Stack>
+
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                         <TextField
                             select
@@ -277,7 +321,7 @@ function OrderFormContent({ order, onClose, onSaved }: OrderFormContentProps) {
                             control={
                                 <Switch
                                     checked={values.shipping}
-                                    onChange={(e) => setField('shipping', e.target.checked)}
+                                    onChange={(e) => handleShippingChange(e.target.checked)}
                                 />
                             }
                             label="Envío"
@@ -292,6 +336,38 @@ function OrderFormContent({ order, onClose, onSaved }: OrderFormContentProps) {
                             fullWidth
                         />
                     </Stack>
+
+                    {values.shipping ? (
+                        <TextField
+                            label="Dirección de entrega"
+                            value={values.deliveryAddress}
+                            onChange={(e) => setField('deliveryAddress', e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                    ) : (
+                        <TextField
+                            select
+                            label="Lugar de entrega"
+                            value={values.pickupLocation}
+                            onChange={(e) => setField('pickupLocation', e.target.value)}
+                            size="small"
+                            fullWidth
+                            slotProps={{ select: { sx: { display: 'flex', alignItems: 'center' } } }}
+                        >
+                            {!values.pickupLocation && (
+                                <MenuItem value="" disabled>
+                                    Seleccioná un lugar
+                                </MenuItem>
+                            )}
+                            {PICKUP_LOCATION_OPTIONS.map((option) => (
+                                <MenuItem key={option.value} value={option.value}>
+                                    <ColorBar color={option.color} />
+                                    {option.label}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                    )}
 
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                         <CurrencyField

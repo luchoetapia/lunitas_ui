@@ -51,10 +51,17 @@ export interface OrderProduct {
 
 export interface Order {
     _id: string
+    // Not required: can be empty on a direct sale.
+    customerName?: string
+    // Free text: phone, Instagram handle, etc. Can be empty for a direct sale.
+    contactDetail?: string
     products: OrderProduct[]
     totalPrice: number
     shipping: boolean
     shippingAmount: number
+    // Only one of these two is set, depending on `shipping`.
+    deliveryAddress?: string
+    pickupLocation?: string
     cost: number
     orderDate: string
     deliveryDate?: string

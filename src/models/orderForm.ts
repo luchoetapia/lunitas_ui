@@ -32,11 +32,16 @@ export const createEmptyOrderProduct = (): OrderProductFormValues => ({
 })
 
 export interface OrderFormValues {
+    customerName: string
+    contactDetail: string
     products: OrderProductFormValues[]
     state: OrderState
     channel: string
     shipping: boolean
     shippingAmount: string
+    // Only one of these two is used at a time, depending on `shipping`.
+    deliveryAddress: string
+    pickupLocation: string
     cost: string
     deposit: string
     orderDate: string
@@ -56,11 +61,15 @@ const toDateInputValue = (value?: string | Date): string => {
 // A factory (not a constant) so the default order date is always "today",
 // not whatever day the module first loaded.
 export const createEmptyOrderValues = (): OrderFormValues => ({
+    customerName: '',
+    contactDetail: '',
     products: [createEmptyOrderProduct()],
     state: 'PENDING',
     channel: '',
     shipping: false,
     shippingAmount: '',
+    deliveryAddress: '',
+    pickupLocation: '',
     cost: '',
     deposit: '',
     orderDate: toDateInputValue(new Date()),
@@ -80,6 +89,8 @@ const orderProductToFormValues = (product: OrderProduct): OrderProductFormValues
 
 // Converts an Order (as returned by the API) into editable form state.
 export const orderToFormValues = (order: Order): OrderFormValues => ({
+    customerName: order.customerName ?? '',
+    contactDetail: order.contactDetail ?? '',
     products: order.products.length > 0
         ? order.products.map(orderProductToFormValues)
         : [createEmptyOrderProduct()],
@@ -87,6 +98,8 @@ export const orderToFormValues = (order: Order): OrderFormValues => ({
     channel: order.channel,
     shipping: order.shipping,
     shippingAmount: String(order.shippingAmount),
+    deliveryAddress: order.deliveryAddress ?? '',
+    pickupLocation: order.pickupLocation ?? '',
     cost: String(order.cost),
     deposit: String(order.deposit),
     orderDate: toDateInputValue(order.orderDate),

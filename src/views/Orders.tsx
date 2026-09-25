@@ -3,8 +3,10 @@ import { Button, Pagination, Stack, Typography } from '@mui/material'
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import CardsList from '../components/common/CardsList'
+import ConfirmDialog from '../components/common/ConfirmDialog'
 import MultiSelectFilter from '../components/common/MultiSelectFilter'
 import OrderCard from '../components/orders/OrderCard'
+import OrderDetail from '../components/orders/OrderDetail'
 import OrderForm from '../components/orders/OrderForm'
 import usePaginatedList from '../hooks/usePaginatedList'
 import { putQuery } from '../helpers/apiQuery'
@@ -33,6 +35,9 @@ function Orders() {
     const [selectedChannels, setSelectedChannels] = useState<string[]>(DEFAULT_CHANNELS)
     const [formOpen, setFormOpen] = useState(false)
     const [editingOrder, setEditingOrder] = useState<Order>()
+    const [detailOpen, setDetailOpen] = useState(false)
+    const [detailOrder, setDetailOrder] = useState<Order>()
+    const [cancelTarget, setCancelTarget] = useState<Order>()
 
     const handleStatesChange = (values: string[]) => {
         setSelectedStates(values)
@@ -70,9 +75,17 @@ function Orders() {
 
     const handleFormClose = () => setFormOpen(false)
 
-    // Ver ficha doesn't have a dialog yet, only the form does for now.
-    const handleViewDetails = () => {
-        useAlertStore.getState().showAlert('La ficha del pedido estara disponible pronto', 'info')
+    const handleViewDetails = (order: Order) => {
+        setDetailOrder(order)
+        setDetailOpen(true)
+    }
+
+    const handleDetailClose = () => setDetailOpen(false)
+
+    // Hands off from the read-only ficha to the edit form.
+    const handleEditFromDetail = (order: Order) => {
+        setDetailOpen(false)
+        handleEdit(order)
     }
 
     // Moves the order to its next state (PENDING -> IN_PROGRESS -> TO_DELIVER -> DELIVERED).
@@ -80,9 +93,30 @@ function Orders() {
         try {
             await putQuery(`/orders/${order._id}/next-status`, {}, {})
             useAlertStore.getState().showAlert('Estado del pedido actualizado', 'success')
+            setDetailOpen(false)
             refetch()
         } catch {
             // apiQuery already surfaced a user-facing alert.
+        }
+    }
+
+    // Opens the confirmation modal instead of cancelling right away.
+    const handleRequestCancel = (order: Order) => setCancelTarget(order)
+
+    const handleCancelDialogClose = () => setCancelTarget(undefined)
+
+    const handleConfirmCancel = async () => {
+        if (!cancelTarget) return
+
+        try {
+            await putQuery(`/orders/${cancelTarget._id}/cancel`, {}, {})
+            useAlertStore.getState().showAlert('Pedido cancelado', 'success')
+            setDetailOpen(false)
+            refetch()
+        } catch {
+            // apiQuery already surfaced a user-facing alert.
+        } finally {
+            setCancelTarget(undefined)
         }
     }
 
@@ -160,6 +194,25 @@ function Orders() {
                 order={editingOrder}
                 onClose={handleFormClose}
                 onSaved={refetch}
+            />
+
+            <OrderDetail
+                open={detailOpen}
+                order={detailOrder}
+                onClose={handleDetailClose}
+                onEdit={handleEditFromDetail}
+                onAdvanceStatus={handleAdvanceStatus}
+                onCancel={handleRequestCancel}
+            />
+
+            <ConfirmDialog
+                open={!!cancelTarget}
+                title="Cancelar pedido"
+                message="¿Confirmás que querés cancelar este pedido? Esta acción no se puede deshacer."
+                confirmLabel="Cancelar pedido"
+                confirmColor="error"
+                onConfirm={handleConfirmCancel}
+                onClose={handleCancelDialogClose}
             />
         </Stack>
     )

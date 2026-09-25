@@ -1,4 +1,4 @@
-import { orderSellingChannelParams, orderStatusParams } from './ordersParams'
+import { orderPickupLocationParams, orderSellingChannelParams, orderStatusParams } from './ordersParams'
 
 export interface OrderOption {
     value: string
@@ -11,6 +11,13 @@ export const getStateOptions = (): OrderOption[] =>
 
 export const getChannelOptions = (): OrderOption[] =>
     Object.entries(orderSellingChannelParams).map(([value, { label, color }]) => ({
+        value,
+        label,
+        color,
+    }))
+
+export const getPickupLocationOptions = (): OrderOption[] =>
+    Object.entries(orderPickupLocationParams).map(([value, { label, color }]) => ({
         value,
         label,
         color,

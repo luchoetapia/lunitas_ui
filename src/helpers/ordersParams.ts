@@ -13,3 +13,11 @@ export const orderStatusParams: Record<string, { color: string, label: string }>
     "DELIVERED": { color: "#A67984", label: "Entregado" },
     "CANCELLED": { color: "#E4574B", label: "Cancelado" },
 }
+
+// Pickup spot shown when an order has no shipping. Expected to grow as new
+// pickup locations are added — extend this map (and OrderSchema's
+// pickupLocationEnum) rather than hardcoding options elsewhere.
+export const orderPickupLocationParams: Record<string, { color: string, label: string }> = {
+    "LOCAL_FLORES": { color: "#A67984", label: "Local Flores" },
+    "TALLER": { color: "#6B9C5D", label: "Taller" },
+}
